@@ -119,9 +119,3 @@ This creates an optimized production build in the `build` folder.
 ## License
 
 [MIT License](LICENSE)
-
-## Acknowledgments
-
-- React.js team for the amazing framework
-- React Icons for beautiful icon components
-- The open-source community for inspiration and resources
