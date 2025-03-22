@@ -1,9 +1,27 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { FiUploadCloud, FiFile, FiX, FiCalendar, FiHash, FiHeadphones, FiSettings } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Headphones, 
+  Settings, 
+  Upload, 
+  Calendar, 
+  Hash, 
+  FileText, 
+  X, 
+  CheckCircle,
+  Clock,
+  BarChart2,
+  List,
+  Home,
+  CreditCard,
+  Menu,
+  ChevronRight
+} from 'lucide-react';
 import './HomePage.css';
 
-function HomePage() {
+function HomePage({ initialTab = 'summarize' }) {
   const [audioFile, setAudioFile] = useState(null);
   const [meetingNumber, setMeetingNumber] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
@@ -12,10 +30,48 @@ function HomePage() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const navigate = useNavigate();
+  const location = useLocation();
   
   // Create refs for focus handling
   const fileInputRef = useRef(null);
   const dropAreaRef = useRef(null);
+  const tabsRef = useRef(null);
+  const activeTabLineRef = useRef(null);
+
+  // Update tab based on URL changes
+  useEffect(() => {
+    // Set active tab based on path
+    if (location.pathname === '/') {
+      setActiveTab('home');
+    } else if (location.pathname === '/summarize') {
+      setActiveTab('summarize');
+    } else if (location.pathname === '/history') {
+      setActiveTab('history');
+    } else if (location.pathname === '/templates') {
+      setActiveTab('templates');
+    } else if (location.pathname === '/payment') {
+      setActiveTab('payment');
+    }
+  }, [location.pathname]);
+  
+  // Update active tab indicator position
+  useEffect(() => {
+    if (tabsRef.current && activeTabLineRef.current) {
+      const activeTabElement = tabsRef.current.querySelector('.active');
+      if (activeTabElement) {
+        const tabRect = activeTabElement.getBoundingClientRect();
+        const tabsRect = tabsRef.current.getBoundingClientRect();
+        
+        activeTabLineRef.current.style.width = `${tabRect.width}px`;
+        activeTabLineRef.current.style.left = `${tabRect.left - tabsRect.left}px`;
+      }
+    }
+  }, [activeTab]);
 
   // Handle file selection
   const handleFileChange = (event) => {
@@ -63,17 +119,17 @@ function HomePage() {
   // Handle drag and drop functionality
   const handleDragOver = (e) => {
     e.preventDefault();
-    dropAreaRef.current.classList.add('drag-over');
+    setIsDragging(true);
   };
   
   const handleDragLeave = (e) => {
     e.preventDefault();
-    dropAreaRef.current.classList.remove('drag-over');
+    setIsDragging(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    dropAreaRef.current.classList.remove('drag-over');
+    setIsDragging(false);
     
     const file = e.dataTransfer.files[0];
     processFile(file);
@@ -176,64 +232,174 @@ function HomePage() {
     else return (bytes / 1048576).toFixed(1) + ' MB';
   };
 
+  // Tab change handler
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+    
+    // Update URL based on tab
+    if (tab === 'home') {
+      navigate('/');
+    } else if (tab === 'payment') {
+      navigate('/payment');
+    } else {
+      navigate(`/${tab}`);
+    }
+  };
+
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
   return (
     <div className="meeting-summarizer">
-      <div className="card">
+      <motion.div 
+        className="card"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <header className="app-header">
           <div className="header-content">
-            <div className="header-brand">
+            <motion.div 
+              className="header-brand"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
               <div className="logo-container">
-                <FiHeadphones className="logo-icon" />
+                <Headphones className="logo-icon" size={24} />
               </div>
               <div className="brand-text">
                 <h1 className="page-title">Meeting Summarizer</h1>
                 <p className="subtitle">Transform your audio recordings into actionable insights</p>
               </div>
-            </div>
+            </motion.div>
+            
             <div className="header-actions">
-              <button className="header-button">
-                <FiSettings className="header-button-icon" />
+              <motion.button 
+                className="mobile-menu-toggle"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleMobileMenu}
+                aria-label="Toggle navigation menu"
+              >
+                <Menu size={20} />
+              </motion.button>
+              
+              <motion.button 
+                className="header-button"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Settings className="header-button-icon" size={16} />
                 <span>Settings</span>
-              </button>
+              </motion.button>
             </div>
           </div>
           
-          <div className="header-tabs">
-            <button className="tab-button active">Summarize</button>
-            <button className="tab-button">History</button>
-            <button className="tab-button">Templates</button>
-          </div>
+          <nav className={`main-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+            <div className="nav-tabs" ref={tabsRef}>
+              <motion.button 
+                className={`nav-tab ${activeTab === 'home' ? 'active' : ''}`}
+                onClick={() => handleTabChange('home')}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Home size={16} className="nav-icon" />
+                <span>Home</span>
+              </motion.button>
+              
+              <motion.button 
+                className={`nav-tab ${activeTab === 'summarize' ? 'active' : ''}`}
+                onClick={() => handleTabChange('summarize')}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <BarChart2 size={16} className="nav-icon" />
+                <span>Summarize</span>
+              </motion.button>
+              
+              <motion.button 
+                className={`nav-tab ${activeTab === 'history' ? 'active' : ''}`}
+                onClick={() => handleTabChange('history')}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Clock size={16} className="nav-icon" />
+                <span>History</span>
+              </motion.button>
+              
+              <motion.button 
+                className={`nav-tab ${activeTab === 'templates' ? 'active' : ''}`}
+                onClick={() => handleTabChange('templates')}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <List size={16} className="nav-icon" />
+                <span>Templates</span>
+              </motion.button>
+              
+              <motion.button 
+                className={`nav-tab ${activeTab === 'payment' ? 'active' : ''}`}
+                onClick={() => handleTabChange('payment')}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <CreditCard size={16} className="nav-icon" />
+                <span>Payment</span>
+              </motion.button>
+              
+              <div className="nav-indicator" ref={activeTabLineRef}></div>
+            </div>
+          </nav>
         </header>
         
         {/* Display error message if any */}
-        {error && (
-          <div className="notification error-message">
-            <FiX className="notification-icon" />
-            <p>{error}</p>
-            <button 
-              type="button" 
-              className="close-notification"
-              onClick={() => setError(null)}
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              className="notification error-message"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
             >
-              <FiX />
-            </button>
-          </div>
-        )}
+              <X className="notification-icon" size={20} />
+              <p>{error}</p>
+              <button 
+                type="button" 
+                className="close-notification"
+                onClick={() => setError(null)}
+              >
+                <X size={16} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {/* Display success message if any */}
-        {successMessage && (
-          <div className="notification success-message">
-            <div className="success-icon">✓</div>
-            <p>{successMessage}</p>
-            <button 
-              type="button" 
-              className="close-notification"
-              onClick={() => setSuccessMessage(null)}
+        <AnimatePresence>
+          {successMessage && (
+            <motion.div 
+              className="notification success-message"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
             >
-              <FiX />
-            </button>
-          </div>
-        )}
+              <CheckCircle className="notification-icon" size={20} />
+              <p>{successMessage}</p>
+              <button 
+                type="button" 
+                className="close-notification"
+                onClick={() => setSuccessMessage(null)}
+              >
+                <X size={16} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         <div className="layout-container">
           <aside className="sidebar">
@@ -241,12 +407,18 @@ function HomePage() {
               {/* Audio Upload Section */}
               <div className="form-section">
                 <h2 className="section-title">
-                  <span className="section-number">1</span>Upload Audio File
+                  <motion.span 
+                    className="section-number"
+                    whileHover={{ scale: 1.1 }}
+                  >1</motion.span>
+                  Upload Audio File
                 </h2>
                 
-                <div 
+                <motion.div 
                   ref={dropAreaRef}
-                  className="drop-area" 
+                  className={`drop-area ${isDragging ? 'drag-over' : ''}`}
+                  whileHover={{ y: -4, boxShadow: "0 8px 15px -3px rgba(0, 0, 0, 0.1)" }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
@@ -254,16 +426,56 @@ function HomePage() {
                 >
                   {!isFileSelected ? (
                     <>
-                      <div className="upload-icon-container">
-                        <FiUploadCloud className="upload-icon" />
-                      </div>
-                      <p className="drop-text">Drag and drop your audio file here</p>
-                      <p className="file-limit">or click to browse files</p>
-                      <div className="file-types">
-                        <span className="file-type">MP3</span>
-                        <span className="file-type">WAV</span>
-                      </div>
-                      <p className="file-size-limit">Maximum file size: 200MB</p>
+                      <motion.div 
+                        className="upload-icon-container"
+                        animate={{ 
+                          y: [0, -8, 0],
+                          scale: [1, 1.05, 1]
+                        }}
+                        transition={{ 
+                          repeat: Infinity, 
+                          duration: 3,
+                          repeatType: "loop",
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Upload className="upload-icon" size={32} strokeWidth={1.5} />
+                      </motion.div>
+                      <motion.p 
+                        className="drop-text"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        Drag and drop your audio file here
+                      </motion.p>
+                      <motion.p 
+                        className="file-limit"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        or click to browse files
+                      </motion.p>
+                      
+                      <motion.div 
+                        className="file-requirements"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                      >
+                        <div className="file-types">
+                          <span className="file-type">MP3</span>
+                          <span className="file-type">WAV</span>
+                        </div>
+                        <motion.div 
+                          className="file-size-limit"
+                          whileHover={{ y: -2, boxShadow: "0 4px 8px rgba(67, 97, 238, 0.1)" }}
+                        >
+                          <FileText size={14} /> Maximum file size: 200MB
+                        </motion.div>
+                      </motion.div>
+                      
                       <input 
                         ref={fileInputRef}
                         type="file" 
@@ -273,79 +485,125 @@ function HomePage() {
                       />
                     </>
                   ) : (
-                    <div className="selected-file">
-                      <div className="file-icon-container">
-                        <FiFile className="file-icon" />
-                      </div>
+                    <motion.div 
+                      className="selected-file"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ 
+                        type: "spring", 
+                        stiffness: 500, 
+                        damping: 30,
+                        duration: 0.3 
+                      }}
+                    >
+                      <motion.div 
+                        className="file-icon-container"
+                        whileHover={{ scale: 1.1, boxShadow: "0 4px 12px rgba(67, 97, 238, 0.2)" }}
+                      >
+                        <FileText className="file-icon" size={22} />
+                      </motion.div>
                       <div className="file-info">
                         <span className="file-name">{audioFile.name}</span>
-                        <span className="file-size">{formatFileSize(audioFile.size)}</span>
+                        <span className="file-size">
+                          <motion.span 
+                            animate={{ color: "var(--primary-color)" }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            {formatFileSize(audioFile.size)}
+                          </motion.span>
+                          {audioFile.type && ` • ${audioFile.type.split('/')[1].toUpperCase()}`}
+                        </span>
                         
                         {/* Progress bar */}
                         <div className="progress-container">
-                          <div 
+                          <motion.div 
                             className="progress-bar" 
-                            style={{ width: `${uploadProgress}%` }}
-                          ></div>
+                            initial={{ width: 0 }}
+                            animate={{ width: `${uploadProgress}%` }}
+                            transition={{ 
+                              type: "spring", 
+                              stiffness: 100, 
+                              damping: 20 
+                            }}
+                          ></motion.div>
                         </div>
                       </div>
-                      <button 
+                      <motion.button 
                         type="button" 
                         className="remove-file" 
                         onClick={handleRemoveFile}
                         aria-label="Remove file"
+                        whileHover={{ 
+                          scale: 1.1, 
+                          backgroundColor: "rgba(229, 62, 62, 0.1)" 
+                        }}
+                        whileTap={{ scale: 0.9 }}
                       >
-                        <FiX />
-                      </button>
-                    </div>
+                        <X size={18} />
+                      </motion.button>
+                    </motion.div>
                   )}
-                </div>
+                </motion.div>
               </div>
 
               {/* Meeting Details Section */}
               <div className="form-section">
                 <h2 className="section-title">
-                  <span className="section-number">2</span>Meeting Details
+                  <motion.span 
+                    className="section-number"
+                    whileHover={{ scale: 1.1 }}
+                  >2</motion.span>
+                  Meeting Details
                 </h2>
                 
                 {/* Meeting Number Input */}
                 <div className="input-group">
                   <label htmlFor="meetingNumber" className="input-label">
-                    <FiHash className="input-icon" />
+                    <Hash className="input-icon" size={16} />
                     Meeting Number
                   </label>
-                  <input
+                  <motion.input
                     type="number"
                     id="meetingNumber"
                     value={meetingNumber}
                     onChange={(e) => setMeetingNumber(e.target.value)}
-                    placeholder="Enter meeting ID (e.g., 1001)"
+                    placeholder="Enter a unique identifier (e.g. 1001)"
                     className="text-input"
+                    whileFocus={{ boxShadow: "0 0 0 3px rgba(67, 97, 238, 0.15)" }}
                   />
+                  <div className="input-help-text">
+                    Used to identify this meeting in your history
+                  </div>
                 </div>
 
                 {/* Meeting Date Input */}
                 <div className="input-group">
                   <label htmlFor="meetingDate" className="input-label">
-                    <FiCalendar className="input-icon" />
+                    <Calendar className="input-icon" size={16} />
                     Meeting Date
                   </label>
-                  <input
+                  <motion.input
                     type="date"
                     id="meetingDate"
                     value={meetingDate}
                     onChange={(e) => setMeetingDate(e.target.value)}
                     className="text-input"
+                    whileFocus={{ boxShadow: "0 0 0 3px rgba(67, 97, 238, 0.15)" }}
                   />
+                  <div className="input-help-text">
+                    When the meeting took place
+                  </div>
                 </div>
               </div>
 
               {/* Process Button */}
               <div className="form-section">
-                <button 
+                <motion.button 
                   type="submit" 
                   className="process-button"
-                  disabled={isLoading}
+                  disabled={isLoading || !audioFile}
+                  whileHover={!isLoading && audioFile ? { y: -2, boxShadow: "0 8px 15px rgba(67, 97, 238, 0.3)" } : {}}
+                  whileTap={!isLoading && audioFile ? { y: 0, boxShadow: "0 4px 6px rgba(67, 97, 238, 0.2)" } : {}}
                 >
                   {isLoading ? (
                     <>
@@ -353,83 +611,218 @@ function HomePage() {
                       <span>Processing...</span>
                     </>
                   ) : (
-                    <span>Process Meeting</span>
+                    <>
+                      {!audioFile ? 'Upload Audio First' : 'Process Meeting'}
+                    </>
                   )}
-                </button>
+                </motion.button>
               </div>
             </form>
           </aside>
 
           {/* Main Content Area */}
           <main className="content-area">
-            {!audioFile && !isLoading && !successMessage && (
-              <div className="placeholder-container">
-                <div className="placeholder-icon">📝</div>
-                <h3 className="placeholder-title">Ready to analyze your meeting</h3>
-                <p className="placeholder-message">
-                  Upload an audio file and provide meeting details to get started.
-                  We'll process your recording and generate a comprehensive summary.
-                </p>
-                <div className="placeholder-steps">
-                  <div className="step">
-                    <div className="step-number">1</div>
-                    <div className="step-text">Upload audio</div>
-                  </div>
-                  <div className="step-connector"></div>
-                  <div className="step">
-                    <div className="step-number">2</div>
-                    <div className="step-text">Enter details</div>
-                  </div>
-                  <div className="step-connector"></div>
-                  <div className="step">
-                    <div className="step-number">3</div>
-                    <div className="step-text">Process</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {isLoading && (
-              <div className="processing-container">
-                <div className="processing-animation">
-                  <div className="processing-dots">
-                    <div className="dot"></div>
-                    <div className="dot"></div>
-                    <div className="dot"></div>
-                  </div>
-                </div>
-                <h3 className="processing-title">Processing Your Meeting</h3>
-                <p className="processing-message">
-                  We're analyzing your audio file to extract key information.
-                  This may take a few moments depending on the length of your recording.
-                </p>
-              </div>
-            )}
-            
-            {/* 
-              TODO: Display processing results here
-              This area can be used to show:
-              - Summary of the meeting
-              - Transcription
-              - Action items
-              - Other data returned from the API
+            <AnimatePresence mode="wait">
+              {activeTab === 'summarize' && (
+                <motion.div
+                  key="summarize"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
+                >
+                  {!audioFile && !isLoading && !successMessage && (
+                    <motion.div 
+                      className="placeholder-container"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className="placeholder-icon">📝</div>
+                      <h3 className="placeholder-title">Ready to analyze your meeting</h3>
+                      <p className="placeholder-message">
+                        Upload an audio file and provide meeting details to get started.
+                        We'll process your recording and generate a comprehensive summary.
+                      </p>
+                      <div className="placeholder-steps">
+                        <div className="step">
+                          <div className="step-number">1</div>
+                          <div className="step-text">Upload audio</div>
+                        </div>
+                        <div className="step-connector"></div>
+                        <div className="step">
+                          <div className="step-number">2</div>
+                          <div className="step-text">Enter details</div>
+                        </div>
+                        <div className="step-connector"></div>
+                        <div className="step">
+                          <div className="step-number">3</div>
+                          <div className="step-text">Process</div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  
+                  {isLoading && (
+                    <motion.div 
+                      className="processing-container"
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className="processing-animation">
+                        <div className="processing-dots">
+                          <motion.div 
+                            className="dot"
+                            animate={{ 
+                              scale: [1, 1.5, 1],
+                              opacity: [0.3, 1, 0.3]
+                            }}
+                            transition={{ 
+                              repeat: Infinity,
+                              duration: 1.5,
+                              ease: "easeInOut"
+                            }}
+                          ></motion.div>
+                          <motion.div 
+                            className="dot"
+                            animate={{ 
+                              scale: [1, 1.5, 1],
+                              opacity: [0.3, 1, 0.3]
+                            }}
+                            transition={{ 
+                              repeat: Infinity,
+                              duration: 1.5,
+                              delay: 0.5,
+                              ease: "easeInOut"
+                            }}
+                          ></motion.div>
+                          <motion.div 
+                            className="dot"
+                            animate={{ 
+                              scale: [1, 1.5, 1],
+                              opacity: [0.3, 1, 0.3]
+                            }}
+                            transition={{ 
+                              repeat: Infinity,
+                              duration: 1.5,
+                              delay: 1,
+                              ease: "easeInOut"
+                            }}
+                          ></motion.div>
+                        </div>
+                      </div>
+                      <h3 className="processing-title">Processing Your Meeting</h3>
+                      <p className="processing-message">
+                        We're analyzing your audio file to extract key information.
+                        This may take a few moments depending on the length of your recording.
+                      </p>
+                    </motion.div>
+                  )}
+                  
+                  {successMessage && !isLoading && (
+                    <motion.div 
+                      className="results-placeholder"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 260, 
+                          damping: 20,
+                          delay: 0.3
+                        }}
+                      >
+                        <CheckCircle size={48} color="var(--success-color)" />
+                      </motion.div>
+                      <h3>Processing Complete</h3>
+                      <p>Your meeting has been successfully analyzed.</p>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
               
-              CUSTOMIZATION: You may want to create a separate component
-              for displaying the results in a structured format
-            */}
-            {successMessage && !isLoading && (
-              <div className="results-placeholder">
-                <h3>Results will appear here</h3>
-                <p>This is where your meeting summary data will be displayed after processing.</p>
-                {/* 
-                  CUSTOMIZATION: Replace this placeholder with actual results display
-                  once you've determined the structure of your API response
-                */}
-              </div>
-            )}
+              {activeTab === 'history' && (
+                <motion.div
+                  key="history"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="placeholder-container">
+                    <Clock size={48} />
+                    <h3 className="placeholder-title">Meeting History</h3>
+                    <p>Your past meeting summaries will appear here.</p>
+                  </div>
+                </motion.div>
+              )}
+              
+              {activeTab === 'templates' && (
+                <motion.div
+                  key="templates"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="placeholder-container">
+                    <List size={48} />
+                    <h3 className="placeholder-title">Summary Templates</h3>
+                    <p>Customize how your meeting summaries are formatted.</p>
+                  </div>
+                </motion.div>
+              )}
+              
+              {activeTab === 'home' && (
+                <motion.div
+                  key="home"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="placeholder-container">
+                    <Home size={48} />
+                    <h3 className="placeholder-title">Welcome to Meeting Summarizer</h3>
+                    <p>Your all-in-one solution for converting audio meetings into actionable text summaries.</p>
+                    <motion.button 
+                      className="action-button"
+                      whileHover={{ scale: 1.05, y: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleTabChange('summarize')}
+                    >
+                      <span>Get Started</span>
+                      <ChevronRight size={16} />
+                    </motion.button>
+                  </div>
+                </motion.div>
+              )}
+              
+              {activeTab === 'payment' && (
+                <motion.div
+                  key="payment"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="placeholder-container">
+                    <CreditCard size={48} />
+                    <h3 className="placeholder-title">Payment & Subscription</h3>
+                    <p>Manage your subscription and payment details here.</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </main>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
